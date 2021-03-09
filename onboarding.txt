@@ -1,0 +1,210 @@
+# Setup
+​
+## Dev Setup
+​
+* Get onto office WiFi
+    * ESSID: KNOW iNK
+    * Ask a team member for the password
+* Sign into Google
+    * Open your associated Gmail - several following steps will send you emails
+* Sign into Slack
+    * Have a team member invite you to groups (for Rails devs):
+        * epulse-aws
+        * epulse-builds (muted)
+        * epulse-dev
+        * epulse-dev-doc
+        * epulse-qa
+        * epulse2
+        * epulse2-notices (muted)
+        * epulse2-pollpad3
+        * out_of_office
+* Sign in to Jira
+    * http://knowink.atlassian.net/
+    * Use your KnowInk Google account
+    * Follow the prompts to create your account
+* Have a teammate forward you invitations for meetings
+    * Daily standup
+    * Weekly team retrospective
+    * Weekly team "tech roundup"
+* Configure VPN
+    * Follow instructions in email to set a Meraki password
+    * System Preferences / Network
+        * Hit the `+` button in the lower left
+            * Interface: VPN
+            * VPN Type: L2TP over IPsec
+            * Service Name: KnowInk
+            * Hit Create
+        * Server Address: 12.156.205.2
+        * Account Name: (your email address)
+        * Authentication Settings
+            * Password: (from the email)
+            * Shared Secret: PollPad2012
+        * Advanced
+            * CHECK Send all traffic over VPN connection
+* Get company-issued laptop
+​
+​
+## Rails Setup
+​
+* Clone the repo:
+​
+~~~ bash
+mkdir -p ~/Work/KnowInk
+cd ~/Work/KnowInk
+git clone git@github.com:knowink-dev/epulse2.git
+cd epulse2
+~~~
+​
+* Copy `config/settings.local.yml` from someone
+* Install ASDF version manager
+    * Feel free to use another version manager (other than RVM), but any deviation (i.e. rbenv) and you’re on your own
+​
+~~~ bash
+git clone https://github.com/asdf-vm/asdf.git ~/.asdf
+cd ~/.asdf
+git checkout "$(git describe --abbrev=0 --tags)"
+echo -e '\n' >> ~/.bashrc
+echo "source $(brew --prefix asdf)/asdf.sh" >> ~/.bash_profile
+~~~ zsh
+brew install asdf
+echo -e "\n. $(brew --prefix asdf)/asdf.sh" >> ~/.zshrc
+~~~
+​
+* Install the version of Ruby we use (this will take a while — around 10 minutes)
+​
+~~~ bash and zsh
+asdf plugin-add ruby
+echo 'legacy_version_file = yes' >> ~/.asdfrc
+asdf install ruby $(cat .ruby-version)
+asdf plugin add elixir https://github.com/asdf-vm/asdf-elixir.git
+asdf global elixir 1.11.3
+asdf install elixir 1.11.3
+asdf plugin add erlang https://github.com/asdf-vm/asdf-erlang.git
+asdf global erlang 23.2.2
+asdf install erlang 23.2.2
+asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
+asdf global nodejs 10.22.1
+
+!!! Follow here to install nodejs via asdf:	https://github.com/asdf-vm/asdf-nodejs
+	brew install gnupg
+	brew install coreutils
+	brew install gawk
+	gpg --expert --full-generate-key
+	bash -c '${ASDF_DATA_DIR:=$HOME/.asdf}/plugins/nodejs/bin/import-previous-release-team-keyring'
+
+asdf install nodejs 10.22.1
+~~~
+​
+* Install dependencies:
+​
+~~~ bash & zsh
+brew install ImageMagick@6 mysql@5.7 mysql-client libsodium redis
+bundle config --local enterprise.contribsys.com 133a9c7b:5f97365b
+bundle config build.mysql2 '--with-ldflags=-L/usr/local/opt/openssl@1.1/lib'
+bundle
+brew tap homebrew/services
+brew link --force mysql@5.7
+brew link --force ImageMagick@6
+brew services start redis
+brew tap elastic/tap
+brew install elastic/tap/elasticsearch-full
+brew services start elasticsearch-full
+export MYSQL_PASSWORD='epulse'
+mysqld	
+brew services start mysql@5.7
+yarn run
+	??? FAILURE TO COMPILE ???	
+~~~
+​
+* Set up DBs:
+    * If it fails, and you need to start over, do `bundle exec rake db:drop` first
+​
+~~~ bash
+mysql -u root --skip-password <<EOF
+  ALTER USER 'root'@'localhost' IDENTIFIED BY '$MYSQL_PASSWORD';
+  CREATE DATABASE epulse;
+  CREATE DATABASE epulse_test;
+  CREATE DATABASE epulse_sigs;
+  CREATE DATABASE epulse_test_sigs;
+  CREATE DATABASE epulse_results;
+  CREATE DATABASE epulse_test_results;
+  CREATE DATABASE epulse_logs;
+  CREATE DATABASE epulse_test_logs;
+  CREATE USER 'epulse'@'%' identified by 'epulse';
+  CREATE USER 'epulse'@'localhost' identified by 'epulse';
+  GRANT ALL PRIVILEGES ON epulse.* to 'epulse'@'%';
+  GRANT ALL PRIVILEGES ON epulse_test.* to 'epulse'@'%';
+  GRANT ALL PRIVILEGES ON epulse_sigs.* to 'epulse'@'%';
+  GRANT ALL PRIVILEGES ON epulse_test_sigs.* to 'epulse'@'%';
+  GRANT ALL PRIVILEGES ON epulse_results.* to 'epulse'@'%';
+  GRANT ALL PRIVILEGES ON epulse_test_results.* to 'epulse'@'%';
+  GRANT ALL PRIVILEGES ON epulse_logs.* to 'epulse'@'%';
+  GRANT ALL PRIVILEGES ON epulse_test_logs.* to 'epulse'@'%';
+  FLUSH PRIVILEGES;
+EOF
+bundle exec rake db:create
+bundle exec rake db:schema:load
+bundle exec rake sigs:db:schema:load
+bundle exec rake results:db:schema:load
+bundle exec rake db:seed
+~~~
+​
+* Start up the various services:
+​
+~~~ bash & zsh
+bundle exec sidekiq -c 2 &
+yarn
+bin/webpack-dev-server &
+export EPULSE_RAILS_FULL_URL='http://lvh.me:3000'
+bundle exec rails s -b 127.0.0.1 &
+~~~
+​
+* Open your local environment in a browser:
+    * `open http://lvh.me:3000/`
+        * Sign in with `admin@epulse.com` and $KNOWINK_DEV_ADMIN_PASSWORD
+* Have a teammate add an AWS account for you
+    * Follow instructions in the email AWS will send you
+    * Use the password the teammate assigned
+    * Log in and change your password when prompted
+    * Go to https://console.aws.amazon.com/iam/home?#/users and click on your name
+        * Click on the Security Credentials tab
+        * Click on Assigned MFA device / Manage
+        * Use (Google) Authenticator, or whatever other method you'd like to use
+        * Click on Create Access Key
+            * Record the Access Key ID and Secret Access Key
+    * `brew install awscli`
+    * Configure AWS client
+        * `aws configure`
+            * AWS Access Key ID: (Access Key ID from above)
+            * AWS Secret Access Key: (Secret Access Key from above)
+            * Default region name: `us-west-2`
+            * Default output format: `json`
+                * Or leave blank; `json` is the default — other options are `text` or `table`
+        * Verify that you can connect: `aws s3 ls`
+* Set up Kubernetes client
+    * Have someone add your AWS ARN to `mapusers` section:
+        * `kubectl edit configmap -n kube-system aws-auth`
+    * Copy someone's `~/.kube/config`
+    * `brew install kubernetes-cli kubectx`
+    * `aws eks update-kubeconfig --name k8s-west`
+    * Test: `kubens dev`
+    * Test: `kubectl get pods`
+    * Test: `kubectl exec -it $(kubectl get pods | grep rails | shuf -n1 | awk '{print $1}') rails c`
+* Set up Helm
+    * `brew install helm@2`
+    * Note that we're still using Helm 2
+        * Helm 3 has a lot of significant changes
+* Set up SSH access to various environments
+    * See https://github.com/knowink-dev/epulse-dev-tools/blob/master/.ssh/config
+    * You can copy everything into your `~/.ssh/config`
+        * Or you can put it in a separate file: `~/.ssh/epulse.config`
+            * Then in the main `~/.ssh/config`, add `Include epulse.config`
+* Have someone add your SSH public key to all the jump servers
+    * You'll need to be VPNed in for SSH to work
+        * Test: `ssh epulse-dev`
+        * Test: `ssh epulse-sandbox`
+        * Test: `ssh epulse-staging`
+        * Test: `ssh epulse-prod`
+        * Test: `ssh epulse-la`
+        * Test: `ssh epulse-nd`
+        * Test: `ssh epulse-nb`
