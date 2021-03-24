@@ -100,8 +100,6 @@ asdf install nodejs 10.22.1
 ~~~ bash & zsh
 brew install ImageMagick@6 mysql@5.7 mysql-client libsodium redis
 bundle config --local enterprise.contribsys.com 133a9c7b:5f97365b
-bundle config build.mysql2 '--with-ldflags=-L/usr/local/opt/openssl@1.1/lib'
-bundle
 brew tap homebrew/services
 brew link --force mysql@5.7
 brew link --force ImageMagick@6
@@ -112,8 +110,9 @@ brew services start elasticsearch-full
 export MYSQL_PASSWORD='epulse'
 mysqld	
 brew services start mysql@5.7
-yarn run
-	??? FAILURE TO COMPILE ???	
+yarn
+yarn start
+	
 ~~~
 ​
 * Set up DBs:
