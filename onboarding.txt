@@ -86,8 +86,6 @@ asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
 asdf global nodejs 10.22.1
 
 !!! Follow here to install nodejs via asdf:	https://github.com/asdf-vm/asdf-nodejs
-	brew install gnupg
-	brew install coreutils
 	brew install gawk
 	gpg --expert --full-generate-key
 	bash -c '${ASDF_DATA_DIR:=$HOME/.asdf}/plugins/nodejs/bin/import-previous-release-team-keyring'
@@ -111,7 +109,7 @@ export MYSQL_PASSWORD='epulse'
 mysqld	
 brew services start mysql@5.7
 yarn
-yarn start
+bundle exec yarn start
 	
 ~~~
 ​
@@ -143,8 +141,6 @@ mysql -u root --skip-password <<EOF
 EOF
 bundle exec rake db:create
 bundle exec rake db:schema:load
-bundle exec rake sigs:db:schema:load
-bundle exec rake results:db:schema:load
 bundle exec rake db:seed
 ~~~
 ​
@@ -155,7 +151,7 @@ bundle exec sidekiq -c 2 &
 yarn
 bin/webpack-dev-server &
 export EPULSE_RAILS_FULL_URL='http://lvh.me:3000'
-bundle exec rails s -b 127.0.0.1 &
+bundle exec rails s -b 0.0.0.0 &
 ~~~
 ​
 * Open your local environment in a browser:
@@ -180,15 +176,6 @@ bundle exec rails s -b 127.0.0.1 &
             * Default output format: `json`
                 * Or leave blank; `json` is the default — other options are `text` or `table`
         * Verify that you can connect: `aws s3 ls`
-* Set up Kubernetes client
-    * Have someone add your AWS ARN to `mapusers` section:
-        * `kubectl edit configmap -n kube-system aws-auth`
-    * Copy someone's `~/.kube/config`
-    * `brew install kubernetes-cli kubectx`
-    * `aws eks update-kubeconfig --name k8s-west`
-    * Test: `kubens dev`
-    * Test: `kubectl get pods`
-    * Test: `kubectl exec -it $(kubectl get pods | grep rails | shuf -n1 | awk '{print $1}') rails c`
 * Set up Helm
     * `brew install helm@2`
     * Note that we're still using Helm 2
@@ -207,3 +194,12 @@ bundle exec rails s -b 127.0.0.1 &
         * Test: `ssh epulse-la`
         * Test: `ssh epulse-nd`
         * Test: `ssh epulse-nb`
+* Set up Kubernetes client
+    * Have someone add your AWS ARN to `mapusers` section:
+        * `kubectl edit configmap -n kube-system aws-auth`
+    * Copy someone's `~/.kube/config`
+    * `brew install kubernetes-cli kubectx`
+    * `aws eks update-kubeconfig --name k8s-west`
+    * Test: `kubens dev`
+    * Test: `kubectl get pods`
+    * Test: `kubectl exec -it $(kubectl get pods | grep rails | shuf -n1 | awk '{print $1}') rails c`
